@@ -56,6 +56,12 @@ func TestGetFloat(t *testing.T) {
 	if err != ErrIncompatibleType {
 		t.Errorf("Expected %#v, got %#v", ErrIncompatibleType, err)
 	}
+
+	// Test out caching of values
+	received, _ = config.GetFloat("Level")
+	if expected != received {
+		t.Errorf("Expected %#v, got %#v", expected, received)
+	}
 }
 
 func TestGetBool(t *testing.T) {
@@ -75,6 +81,12 @@ func TestGetBool(t *testing.T) {
 	if err != ErrIncompatibleType {
 		t.Errorf("Expected %#v, got %#v", ErrIncompatibleType, err)
 	}
+
+	// test out caching of values
+	received, _ = config.GetBool("Running")
+	if !received {
+		t.Errorf("Expected %#v, got %#v", true, received)
+	}
 }
 
 func TestGetString(t *testing.T) {
@@ -91,6 +103,12 @@ func TestGetString(t *testing.T) {
 
 	_, err = config.GetString("Running")
 	if err != ErrIncompatibleType {
+		t.Errorf("Expected %#v, got %#v", expectedV, received)
+	}
+
+	// Test out caching
+	received, _ = config.GetString("Id")
+	if received != expectedV {
 		t.Errorf("Expected %#v, got %#v", expectedV, received)
 	}
 }
