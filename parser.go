@@ -1,8 +1,11 @@
 package configparser
 
 import (
+	"encoding/json"
 	"errors"
 	"io"
+
+	"github.com/kingzbauer/json_cli/jsongear"
 )
 
 // ConfigParser provides the needed machinery to retrieve configuration values
@@ -31,12 +34,58 @@ var (
 	// ErrIncompatibleType is the error returned when the value being retrieved is not
 	// compatible with the specified
 	ErrIncompatibleType = errors.New("Incompatible type for stored value")
-	// ErrDecoding is returned when the content of the config reader could not be decoded
-	// with the provided format
-	ErrDecoding = errors.New("Error decoding the reader")
 )
 
 // NewJSONConfigReader reads from reader which should be valid json, and returns a ConfigParser
 func NewJSONConfigReader(reader io.Reader) (ConfigParser, error) {
-	return nil, nil
+	config := new(configParser)
+	if err := json.NewDecoder(reader).Decode(&config.data); err != nil {
+		return nil, err
+	}
+
+	return config, nil
+}
+
+type configParser struct {
+	data interface{}
+}
+
+func (config *configParser) Get(key string) interface{} {
+	return jsongear.Get(key, config.data)
+}
+
+func (config *configParser) GetFloat(key string) (float64, error) {
+	v := jsongear.Get(key, config.data)
+	if v == nil {
+		return 0, ErrDoesNotExist
+	}
+
+	if floatV, ok := v.(float64); ok {
+		return floatV, nil
+	}
+	return 0, ErrIncompatibleType
+}
+
+func (config *configParser) GetString(key string) (string, error) {
+	v := jsongear.Get(key, config.data)
+	if v == nil {
+		return "", ErrDoesNotExist
+	}
+
+	if strV, ok := v.(string); ok {
+		return strV, nil
+	}
+	return "", ErrIncompatibleType
+}
+
+func (config *configParser) GetBool(key string) (bool, error) {
+	v := jsongear.Get(key, config.data)
+	if v == nil {
+		return false, ErrDoesNotExist
+	}
+
+	if boolV, ok := v.(bool); ok {
+		return boolV, nil
+	}
+	return false, ErrIncompatibleType
 }
