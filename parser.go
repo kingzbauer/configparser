@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"sync"
 
 	"github.com/kingzbauer/json_cli/jsongear"
 )
@@ -51,10 +52,13 @@ func NewJSONConfigReader(reader io.Reader) (ConfigParser, error) {
 }
 
 type configParser struct {
-	data      interface{}
-	floatMap  map[string]float64
-	boolMap   map[string]bool
-	stringMap map[string]string
+	data       interface{}
+	floatMap   map[string]float64
+	boolMap    map[string]bool
+	stringMap  map[string]string
+	floatLock  sync.RWMutex
+	boolLock   sync.RWMutex
+	stringLock sync.RWMutex
 }
 
 func (config *configParser) Get(key string) interface{} {
@@ -62,9 +66,12 @@ func (config *configParser) Get(key string) interface{} {
 }
 
 func (config *configParser) GetFloat(key string) (float64, error) {
+	config.floatLock.RLock()
 	if v, ok := config.floatMap[key]; ok {
+		config.floatLock.RUnlock()
 		return v, nil
 	}
+	config.floatLock.RUnlock()
 
 	v := jsongear.Get(key, config.data)
 	if v == nil {
@@ -72,16 +79,21 @@ func (config *configParser) GetFloat(key string) (float64, error) {
 	}
 
 	if floatV, ok := v.(float64); ok {
+		config.floatLock.Lock()
 		config.floatMap[key] = floatV
+		config.floatLock.Unlock()
 		return floatV, nil
 	}
 	return 0, ErrIncompatibleType
 }
 
 func (config *configParser) GetString(key string) (string, error) {
+	config.stringLock.RLock()
 	if v, ok := config.stringMap[key]; ok {
+		config.stringLock.RUnlock()
 		return v, nil
 	}
+	config.stringLock.RUnlock()
 
 	v := jsongear.Get(key, config.data)
 	if v == nil {
@@ -89,16 +101,21 @@ func (config *configParser) GetString(key string) (string, error) {
 	}
 
 	if strV, ok := v.(string); ok {
+		config.stringLock.Lock()
 		config.stringMap[key] = strV
+		config.stringLock.Unlock()
 		return strV, nil
 	}
 	return "", ErrIncompatibleType
 }
 
 func (config *configParser) GetBool(key string) (bool, error) {
+	config.boolLock.RLock()
 	if v, ok := config.boolMap[key]; ok {
+		config.boolLock.RUnlock()
 		return v, nil
 	}
+	config.boolLock.RUnlock()
 
 	v := jsongear.Get(key, config.data)
 	if v == nil {
@@ -106,7 +123,9 @@ func (config *configParser) GetBool(key string) (bool, error) {
 	}
 
 	if boolV, ok := v.(bool); ok {
+		config.boolLock.Lock()
 		config.boolMap[key] = boolV
+		config.boolLock.Unlock()
 		return boolV, nil
 	}
 	return false, ErrIncompatibleType
